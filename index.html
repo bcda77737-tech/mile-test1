@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>상테크 마스터 Pro</title>
+    <style>
+        :root { --primary: #003366; --red: #ff4d4d; --blue: #3498db; --bg: #f0f4f8; --lock: #5d6d7e; --gray: #bdc3c7; --kakao: #fee500; }
+        body { font-family: sans-serif; padding: 25px 15px 40px 15px; background-color: var(--bg); margin: 0; }
+        
+        /* 헤더 스타일 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        #clock { font-weight: bold; color: #555; font-size: 13px; }
+        .top-btns { display: flex; gap: 8px; }
+        .hanbang-btn { background: #ffcc00; color: #000; padding: 6px 12px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 12px; }
+
+        /* 대시보드 스타일 */
+        #price-dashboard { background:white; padding:15px; border-radius:12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 5px solid var(--blue); }
+        .dash-title { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-weight:bold; font-size:14px; color:var(--primary); }
+        .price-grid { display:flex; justify-content:space-around; text-align:center; }
+        .price-label { font-size:11px; color:#888; margin-bottom: 2px; }
+        .price-val { font-weight:bold; color:var(--red); font-size: 15px; }
+
+        /* 카드 스타일 */
+        .calc-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; border-top: 4px solid var(--primary); transition: 0.3s; }
+        .calc-card.locked { border-top-color: var(--lock); background-color: #f8f9fa; opacity: 0.9; }
+        .card-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; }
+        .name-input { border: none; border-bottom: 1.5px solid #ddd; font-weight: bold; font-size: 15px; color: var(--primary); width: 45%; background: transparent; }
+        
+        /* 입력 폼 */
+        .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .input-box { flex: 1; }
+        label { display: block; font-size: 11px; color: #888; margin-bottom: 3px; }
+        input[type="number"], input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; outline: none; }
+        
+        /* 결과 그리드 */
+        .result-area { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #eee; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; display: none; }
+        .res-item { background: #f9f9f9; padding: 8px; border-radius: 6px; text-align: center; }
+        .res-val { font-weight: bold; font-size: 14px; display: block; }
+        .unit-price { grid-column: span 2; background: #fff4f4; color: #e74c3c; }
+
+        /* 하단 버튼 및 메모 */
+        .add-btn { width: 100%; padding: 12px; background: white; border: 2px dashed var(--primary); border-radius: 12px; color: var(--primary); font-weight: bold; font-size: 15px; margin-bottom: 20px; cursor: pointer; }
+        .share-group { display: flex; gap: 8px; margin-bottom: 20px; }
+        .share-btn { flex: 1; padding: 12px 5px; border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 12px; cursor: pointer; }
+        .copy-btn { background: var(--blue); } .kakao-btn { background: var(--kakao); color: #3c1e1e; }
+        .memo-section { background: #fff9c4; padding: 12px; border-radius: 12px; margin-bottom: 20px; }
+        textarea { width: 100%; height: 100px; border: none; background: transparent; font-size: 14px; resize: none; outline: none; }
+        
+        .plus { color: var(--blue); } .minus { color: var(--red); }
+        .lock-btn { background: #eee; border: none; border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+        .del-btn { color: var(--red); font-weight: bold; background: none; border: none; cursor: pointer; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div id="clock">로딩 중...</div>
+    <div class="top-btns">
+        <button id="undoBtn" onclick="undo()" disabled style="border-radius: 15px; border: 1px solid #ccc; background: white; font-size: 11px; padding: 4px 8px;">↩ 되돌리기</button>
+        <a href="https://1bang.kr/pages/tp" class="hanbang-btn" target="_blank">한방 바로가기</a>
+    </div>
+</div>
+
+<div id="price-dashboard">
+    <div class="dash-title">
+        <span>📊 실시간 최저가 (매입 시세)</span>
+        <span id="sync-status" style="font-size:10px; color:#999; font-weight: normal;">연결 중...</span>
+    </div>
+    <div class="price-grid">
+        <div><div class="price-label">롯데10만</div><div id="price-lotte" class="price-val">-</div></div>
+        <div><div class="price-label">신세계10만</div><div id="price-ssg" class="price-val">-</div></div>
+        <div><div class="price-label">현대10만</div><div id="price-hyundai" class="price-val">-</div></div>
+    </div>
+</div>
+
+<div id="calculator-list"></div>
+<button class="add-btn" onclick="addCalculator()">+ 새로운 항목 추가</button>
+
+<div class="share-group">
+    <button class="share-btn copy-btn" onclick="copyToClipboard()">📋 상세 리포트 복사</button>
+    <button class="share-btn kakao-btn" onclick="shareKakao()">💬 카톡으로 공유</button>
+</div>
+
+<div class="memo-section">
+    <div style="font-weight:bold; font-size:13px; margin-bottom:8px;">📝 통합 메모장 (자동 저장)</div>
+    <textarea id="mainMemo" placeholder="메모할 내용을 입력하세요..."></textarea>
+</div>
+
+<button onclick="clearAllData()" style="width:100%; background:none; border:none; color:#bbb; font-size:11px; text-decoration:underline; margin-top:10px;">모든 데이터 초기화</button>
+
+<script>
+    // 1. 시세 대시보드 파싱 로직
+    async function fetchPrices() {
+        const statusEl = document.getElementById('sync-status');
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://1bang.kr/pages/tp')}`;
+        try {
+            const response = await fetch(proxyUrl);
+            const data = await response.json();
+            const html = data.contents;
+            
+            // 1bang.kr 텍스트 패턴 매칭
+            const lotte = html.match(/롯데\s*10만.*?([\d,]{5,6})\s*\(/);
+            const ssg = html.match(/신세계\s*10만.*?([\d,]{5,6})\s*\(/);
+            const hyundai = html.match(/현대\s*10만.*?([\d,]{5,6})\s*\(/);
+
+            if (lotte) document.getElementById('price-lotte').innerText = lotte[1] + "원";
+            if (ssg) document.getElementById('price-ssg').innerText = ssg[1] + "원";
+            if (hyundai) document.getElementById('price-hyundai').innerText = hyundai[1] + "원";
+
+            const now = new Date();
+            statusEl.innerText = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')} 갱신됨`;
+        } catch (e) {
+            statusEl.innerText = "연결 오류";
+        }
+    }
+    setInterval(fetchPrices, 60000); fetchPrices();
+
+    // 2. 핵심 계산 및 내보내기 로직
+    let cardCount = 0;
+    let undoStack = [];
+
+    function calculate(id) {
+        const buy = Number(document.getElementById('buy'+id).value);
+        const face = Number(document.getElementById('face'+id).value);
+        const rate = Number(document.getElementById('rate'+id).value);
+        const resArea = document.getElementById('res'+id);
+
+        if(!buy || !face) { resArea.style.display = 'none'; return; }
+
+        const sell = Math.round(face * (1 - (rate / 100)));
+        const mile = Math.floor(buy / 1500);
+        const profit = sell - buy;
+        
+        resArea.style.display = 'grid';
+        document.getElementById('sell'+id).innerText = sell.toLocaleString() + "원";
+        document.getElementById('mile'+id).innerText = mile.toLocaleString();
+        document.getElementById('profit'+id).innerText = profit.toLocaleString() + "원";
+        document.getElementById('profit'+id).className = "res-val " + (profit >= 0 ? "plus" : "minus");
+        document.getElementById('unit'+id).innerText = profit < 0 ? (Math.abs(profit) / (mile || 1)).toFixed(1) + "원" : "0원";
+        
+        autoSave(id);
+    }
+
+    function generateSummary() {
+        const now = document.getElementById('clock').innerText;
+        let text = `====================\n✈️ 상테크 상세 리포트\n일시: ${now}\n====================\n\n`;
+        
+        document.querySelectorAll('.calc-card').forEach((card, i) => {
+            const id = card.id.replace('card-block-', '');
+            const name = document.getElementById('name' + id).value;
+            const resArea = document.getElementById('res' + id);
+            
+            const buy = document.getElementById('buy' + id).value || '0';
+            const face = document.getElementById('face' + id).value || '0';
+            const rate = document.getElementById('rate' + id).value || '0';
+
+            text += `${i + 1}. ${name}\n`;
+            if (resArea.style.display !== 'none') {
+                text += `  - 입력: ${Number(buy).toLocaleString()}원 / ${Number(face).toLocaleString()}원 / ${rate}%\n`;
+                text += `  - 결과: 매입 ${document.getElementById('sell'+id).innerText} / ${document.getElementById('mile'+id).innerText}마일\n`;
+                text += `  ▶ 손익: ${document.getElementById('profit'+id).innerText} (비용: ${document.getElementById('unit'+id).innerText})\n`;
+            } else {
+                text += `  - (입력 데이터 없음)\n`;
+            }
+            text += `--------------------\n`;
+        });
+
+        const memo = document.getElementById('mainMemo').value;
+        if (memo) text += `\n[📝 메모]\n${memo}\n`;
+        text += `\n====================`;
+        return text;
+    }
+
+    // 3. UI 제어 및 저장 로직
+    function autoSave(id) {
+        const card = document.getElementById('card-block-' + id);
+        const data = {
+            name: document.getElementById('name' + id).value,
+            buy: document.getElementById('buy' + id).value,
+            face: document.getElementById('face' + id).value,
+            rate: document.getElementById('rate' + id).value,
+            locked: card.classList.contains('locked')
+        };
+        localStorage.setItem('calcData' + id, JSON.stringify(data));
+        localStorage.setItem('userMemo', document.getElementById('mainMemo').value);
+    }
+
+    function createCard(id, savedData = null) {
+        cardCount = Math.max(cardCount, id);
+        const data = savedData || { name: '항목 #'+id, buy:'', face:'', rate:'', locked: false };
+        const html = `
+        <div class="calc-card ${data.locked ? 'locked' : ''}" id="card-block-${id}">
+            <div class="card-header-row">
+                <input type="text" id="name${id}" class="name-input" value="${data.name}" oninput="autoSave(${id})">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button class="lock-btn" onclick="toggleLock(${id})">${data.locked ? '🔓' : '🔒'}</button>
+                    <button class="del-btn" onclick="deleteCard(${id})">✕</button>
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-box"><label>구매가</label><input type="number" id="buy${id}" value="${data.buy}" oninput="calculate(${id})" ${data.locked?'disabled':''}></div>
+            </div>
+            <div class="input-row">
+                <div class="input-box"><label>액면가</label><input type="number" id="face${id}" value="${data.face}" oninput="calculate(${id})" ${data.locked?'disabled':''}></div>
+                <div class="input-box"><label>수수료(%)</label><input type="number" id="rate${id}" value="${data.rate}" step="0.1" oninput="calculate(${id})" ${data.locked?'disabled':''}></div>
+            </div>
+            <div id="res${id}" class="result-area">
+                <div class="res-item"><span style="font-size:10px; color:#888;">매입가</span><span id="sell${id}" class="res-val">-</span></div>
+                <div class="res-item"><span style="font-size:10px; color:#888;">마일리지</span><span id="mile${id}" class="res-val">-</span></div>
+                <div class="res-item"><span style="font-size:10px; color:#888;">손익</span><span id="profit${id}" class="res-val">-</span></div>
+                <div class="res-item unit-price"><span style="font-size:10px; color:#888;">1마일 비용</span><span id="unit${id}" class="res-val">-</span></div>
+            </div>
+        </div>`;
+        document.getElementById('calculator-list').insertAdjacentHTML('beforeend', html);
+        if(data.buy) calculate(id);
+    }
+
+    function addCalculator() { saveState(); cardCount++; createCard(cardCount); }
+    
+    function deleteCard(id) {
+        if(confirm("이 항목을 삭제할까요?")) {
+            saveState();
+            document.getElementById('card-block-'+id).remove();
+            localStorage.removeItem('calcData'+id);
+        }
+    }
+
+    function toggleLock(id) {
+        saveState();
+        const card = document.getElementById('card-block-' + id);
+        const inputs = card.querySelectorAll('input:not(.name-input)');
+        const isLocked = card.classList.toggle('locked');
+        inputs.forEach(input => input.disabled = isLocked);
+        card.querySelector('.lock-btn').innerText = isLocked ? '🔓' : '🔒';
+        autoSave(id);
+    }
+
+    function saveState() {
+        const currentState = { memo: document.getElementById('mainMemo').value, cards: [] };
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('calcData'));
+        keys.forEach(k => currentState.cards.push({key: k, data: JSON.parse(localStorage.getItem(k))}));
+        undoStack.push(JSON.stringify(currentState));
+        if(undoStack.length > 10) undoStack.shift();
+        document.getElementById('undoBtn').disabled = false;
+    }
+
+    function undo() {
+        if(undoStack.length === 0) return;
+        const last = JSON.parse(undoStack.pop());
+        localStorage.setItem('userMemo', last.memo);
+        Object.keys(localStorage).forEach(k => { if(k.startsWith('calcData')) localStorage.removeItem(k); });
+        last.cards.forEach(c => localStorage.setItem(c.key, JSON.stringify(c.data)));
+        location.reload();
+    }
+
+    function copyToClipboard() {
+        navigator.clipboard.writeText(generateSummary()).then(() => alert("상세 리포트가 복사되었습니다!"));
+    }
+
+    function shareKakao() {
+        navigator.clipboard.writeText(generateSummary()).then(() => {
+            alert("리포트가 복사되었습니다. 카카오톡 실행 후 붙여넣기 하세요!");
+            window.location.href = "kakaotalk://";
+        });
+    }
+
+    function clearAllData() {
+        if(confirm("모든 데이터를 초기화하시겠습니까?")) { localStorage.clear(); location.reload(); }
+    }
+
+    function updateClock() {
+        document.getElementById('clock').innerText = new Date().toLocaleString();
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    // 초기 실행
+    const savedKeys = Object.keys(localStorage).filter(k => k.startsWith('calcData')).map(k => parseInt(k.replace('calcData','')));
+    if(savedKeys.length > 0) {
+        savedKeys.sort((a,b)=>a-b).forEach(k => createCard(k, JSON.parse(localStorage.getItem('calcData'+k))));
+    } else {
+        createCard(1); createCard(2);
+    }
+    document.getElementById('mainMemo').value = localStorage.getItem('userMemo') || '';
+    document.getElementById('mainMemo').oninput = () => localStorage.setItem('userMemo', document.getElementById('mainMemo').value);
+</script>
+</body>
+</html>
